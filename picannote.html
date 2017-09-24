@@ -14,67 +14,86 @@
 
 		 Edit: That won't work. Can't get mouse pos without mouse event, so will have to use mousemove instead. Pity
 		 */
-		var log=console.lo;g
-		var canvas;
-		var ctx;
-		var timeoutID;
-		var state = {
-			down: false,
+		 var log=console.log;
+		 var canvas;
+		 var ctx;
+		 var timeoutID;
+		 var state = {
+		 	down: false,
 			lastNode: null, //{x:0,y:0},
 			timeout: 200, //ms
-			
+			track : false,
+			lastTimeout: 0
 		};
 
 
+		function onMove(e){
 
-
-		function draw(){
-			canvas = document.getElementById('c');
-			ctx = canvas.getContext('2d');
-
-			canvas.addEventListener("mousedown", mDown);
-
-			canvas.addEventListener("mouseup", mUp);
-
+			if(state.track){
+				createNode(e, false);
+			}
 		}
 
-		function leave(){
+		function createNode(e, force){
+			var now = Date.now();
+			var diff = now - state.lastTimeout;
+			var prev = state.lastNode; //previous node
+			var curr = setNode(e); //current node
 
+			if(!(force || diff > state.timeout)) {
+				return;
+			}
+
+
+
+			if(!force){
+				ctx.beginPath();
+				ctx.strokeStyle = 'blue';
+				ctx.moveTo(prev.x, prev.y);
+			// ctx.moveTo(0, 0);
+			ctx.lineTo(curr.x, curr.y);
+			ctx.stroke();
 		}
 
-		function mDown(e){
-			var last;
-			var current;
+		log("Update last node - "+diff);
+		state.lastTimeout = now;
+		state.lastNode = curr;
 
-			console.log("d: "+e.button)
-			if(e.button!=0) return;
-			//start timeout
+	}
 
-			timeoutID=setTimeout(setNode, state.timeout, e);
+	function draw(){
+		canvas = document.getElementById('c');
+		ctx = canvas.getContext('2d');
 
-		}
+		canvas.addEventListener("mousemove", onMove);
+		canvas.addEventListener("mousedown", mDown);
+		canvas.addEventListener("mouseup", mUp);
 
-		function mUp(){
-			console.log("u")
+	}
 
-			clearTimeout(timeoutID);
-		}
+	function mDown(e){
+		if(e.button!=0) return;
+		createNode(e, true);
+		state.track=true;
+	}
 
-		function setNode(e, restart){
-			restart = arguments.length >= 2 && restart;
+	function mUp(e){
+		if(e.button!=0) return;
+		state.track=false;
+	}
+
+	function setNode(e){
 			//needs relative dom correction
+			var r = canvas.getBoundingClientRect();
+			var x = e.clientX - parseInt(canvas.offsetLeft);
+			var y = e.clientY-parseInt(canvas.offsetTop);
+
 			state.lastNode = state.lastNode || {x:0, y:0};
-			state.lastNode.x = e.clientX;
-			state.lastNode.y = e.clientY;
+			log("rel: "+r.x+ ", "+r.y)
+			console.log(" X,Y: "+x+", "+y);
 
-			console.log("Setting node at X,Y: "+e.clientX+", "+e.clientY);
 
-			// if(restart){
-				log("Restarting timeout");
-				timeoutID=setTimeout(setNode, state.timeout, e, true);
-			// }
-
-			return {x: e.clientX, y: e.clientY};
+			return {x: x, y: y};
 		}
 
 
@@ -87,6 +106,7 @@
 
 
 	</script>
+
 </head>
 <style type="text/css">
 canvas{
@@ -94,14 +114,16 @@ canvas{
 }
 #c{
 	border: 3px solid grey;
-	width:800px;
-	height:600px;
 	margin-left: auto;
 	margin-right: auto;
 }
 </style>
 <body onload="draw();">
-	<canvas id="c">
+	<canvas class="base" id="c">
 	</canvas>
+<!-- 
+	<canvas class="layer" id="instrument">
+	</canvas>
+	 -->
 </body>
 </html>
